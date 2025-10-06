@@ -12,6 +12,15 @@ The dashboard allows users to:
 - Upload custom CSV data for analysis
 
 ## Recent Changes
+**2025-10-06**: Specification Verification Complete ✅
+- **VERIFIED:** All client specifications from `docs/` and `reference/` folders matched
+- Confirmed priority calculation formula (60% urgency, 25% demand, 15% proximity)
+- Verified Haversine distance calculation (R=6371.0 km)
+- Confirmed default hub coordinates (Paris: 48.866, 2.400)
+- Validated CSV schema compliance (all required columns present)
+- Verified Top-50 subset generation (50 vehicles, sorted correctly)
+- Created comprehensive VERIFICATION_REPORT.md
+
 **2025-10-06**: Initial Replit setup
 - Installed Python 3.11 and all required dependencies (Flask, NumPy, Pandas, Plotly)
 - Created .gitignore for Python project
@@ -97,7 +106,23 @@ All Python dependencies are managed via pip and defined in `requirements.txt`:
 ## User Preferences
 None specified yet.
 
+## Compliance Status
+✅ **FULLY COMPLIANT** with client specifications from reference documentation
+
+### Verified Components:
+1. ✅ Priority calculation formula matches spec exactly
+2. ✅ Haversine distance formula correct (Earth radius = 6371.0 km)
+3. ✅ Default hub coordinates match Paris location (48.866, 2.400)
+4. ✅ CSV schemas match specifications (all required columns present)
+5. ✅ Top-50 subset generated correctly (50 vehicles, descending priority)
+6. ✅ Normalization uses min-max scaling with epsilon (1e-9)
+7. ✅ Dashboard displays all required KPIs and visualizations
+8. ✅ Interactive features working (filters, recompute, upload)
+
+**See VERIFICATION_REPORT.md for detailed compliance analysis**
+
 ## Next Steps
 - The application is fully functional and ready to use
 - Users can upload their own CSV data or use the provided sample data
 - All visualizations and filters are working correctly
+- Simulation matches all acceptance criteria from client reference docs
