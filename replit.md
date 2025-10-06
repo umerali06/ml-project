@@ -12,6 +12,16 @@ The dashboard allows users to:
 - Upload custom CSV data for analysis
 
 ## Recent Changes
+**2025-10-06**: ML Simulation Feature Complete ✅
+- **NEW FEATURE:** Run ML simulations directly from web dashboard
+- Added RandomForest ML model training (200 estimators) with configurable random seeds
+- Implemented three seed options: Fixed (42), Random, Custom value
+- ML predictions now drive priority scores (pred_minutes_to_20pct from model output)
+- Real-time dashboard refresh after simulation completes
+- Performance: MAE ~18-21 min, R² ~0.83-0.89 (exceeds requirements: MAE ≤ 35, R² ≥ 0.55)
+- Added scikit-learn dependency for RandomForestRegressor
+- Architect-reviewed and verified ✅
+
 **2025-10-06**: Specification Verification Complete ✅
 - **VERIFIED:** All client specifications from `docs/` and `reference/` folders matched
 - Confirmed priority calculation formula (60% urgency, 25% demand, 15% proximity)
@@ -33,6 +43,7 @@ The dashboard allows users to:
 ### Tech Stack
 - **Backend**: Flask 3.1.2 (Python web framework)
 - **Data Processing**: Pandas 2.3.3, NumPy 2.3.3
+- **Machine Learning**: scikit-learn 1.6.1 (RandomForestRegressor)
 - **Visualization**: Plotly 6.3.1
 - **Production Server**: Gunicorn 23.0.0
 - **Frontend**: Bootstrap 5.3.2, custom CSS with dark theme
@@ -54,11 +65,12 @@ The dashboard allows users to:
 ```
 
 ### Key Features
-1. **Dynamic Priority Calculation**: Haversine distance algorithm for hub proximity
-2. **Interactive Filters**: Zone, hour, and minimum priority filters
-3. **Real-time Visualization**: 4 interactive Plotly charts
-4. **CSV Upload**: Support for custom data uploads
-5. **Responsive Design**: Mobile-friendly dark theme interface
+1. **ML Simulation**: Run RandomForest simulations with configurable seeds (Fixed/Random/Custom)
+2. **Dynamic Priority Calculation**: Haversine distance algorithm for hub proximity
+3. **Interactive Filters**: Zone, hour, and minimum priority filters
+4. **Real-time Visualization**: 4 interactive Plotly charts
+5. **CSV Upload**: Support for custom data uploads
+6. **Responsive Design**: Mobile-friendly dark theme interface
 
 ### Data Flow
 1. Load CSV data (dispatch_list, top_50_dispatch, synthetic_gbfs)
@@ -95,11 +107,14 @@ All Python dependencies are managed via pip and defined in `requirements.txt`:
 - NumPy (>=2.1)
 - Pandas (>=2.2.3)
 - Plotly (>=5.22)
+- scikit-learn (>=1.5.0) - For RandomForest ML model
 - Gunicorn (>=21.2) - Linux/macOS only
 
 ## Development Notes
 - The app uses Haversine formula for distance calculations
 - Priority score is normalized and weighted (default: 60% urgency, 25% demand, 15% proximity)
+- ML model: RandomForestRegressor with 200 estimators, predicts minutes_to_empty
+- Priority calculation uses ML predictions (pred_minutes_to_20pct derived from model output)
 - Charts use Plotly dark theme with custom colors matching the UI
 - Client-side filtering implemented in JavaScript for performance
 
