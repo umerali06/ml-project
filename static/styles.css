@@ -1,0 +1,54 @@
+:root{
+  --bg:#0b1220; --panel:#0f172a; --panel-2:#0b1324; --border:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --brand:#60a5fa; --brand-2:#22d3ee; --ok:#34d399; --warn:#f59e0b; --err:#ef4444;
+}
+html,body{background:var(--bg); color:var(--text); font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;} 
+.navbar{background:linear-gradient(90deg, #0f172a 0%, #0b1220 100%); border-bottom:1px solid var(--border);} 
+.brand{background:linear-gradient(90deg,var(--brand),var(--brand-2)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.card{background:var(--panel); border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,.25); border-radius:14px;} 
+.kpi{font-size:1.0rem; letter-spacing:.2px; color:#a5b4fc;} 
+.kpi strong{font-size:1.8rem; color:#e5e7eb;}
+.badge-chip{background:rgba(96,165,250,.15); border:1px solid rgba(96,165,250,.35); color:#bfdbfe; border-radius:999px; padding:.25rem .5rem; font-size:.75rem;}
+.btn-outline-light{border-color:#334155; color:#cbd5e1; transition:all .15s ease}
+.btn-outline-light:hover{background:#1f2937; color:#e5e7eb; border-color:#475569; box-shadow:0 0 0 3px rgba(96,165,250,.15)}
+.btn-outline-light:active{transform:translateY(1px)}
+.btn-outline-light:focus{outline:none; box-shadow:0 0 0 3px rgba(34,211,238,.18)}
+.table{color:#e5e7eb; font-size:.94rem}
+.table thead th{color:#93c5fd; border-bottom-color:#334155; font-weight:600}
+.table tbody tr{border-color:#1f2937}
+.table tbody tr:hover{background:#0b1324}
+.table tbody tr:hover td{color:#f1f5f9}
+.table td, .table th{vertical-align:middle}
+.card h6{color:#c7d2fe; font-weight:600; letter-spacing:.2px}
+.card ol li{color:#e5e7eb}
+.card .mb-0, .card p, .kpi{color:#e5e7eb}
+.footer{color:var(--muted); font-size:.9rem}
+.pill{border:1px solid #334155; border-radius:999px; padding:.35rem .6rem; color:#93c5fd}
+.pill:hover{border-color:#60a5fa; color:#bfdbfe}
+.filters .form-select, .filters .form-control{background:var(--panel-2); border-color:#3a4a5f; color:#e5e7eb; height:46px; border-radius:12px}
+.filters .form-select:hover, .filters .form-control:hover{border-color:#4b5d75}
+.filters label{color:#cbd5e1; font-size:.9rem}
+.filters .form-select:focus, .filters .form-control:focus{border-color:#60a5fa; box-shadow:0 0 0 .2rem rgba(96,165,250,.18)}
+.filters ::placeholder{color:#94a3b8; opacity:1}
+.filters input[type="file"]{height:auto; padding:.45rem .75rem;}
+.filters input[type="file"]::file-selector-button{background:#1f2937; border:1px solid #334155; color:#e5e7eb; border-radius:8px; padding:.35rem .75rem; margin-right:.75rem}
+.filters input[type="file"]::file-selector-button:hover{background:#293241}
+
+/* Responsive tweaks */
+@media (max-width: 991px){
+  .kpi strong{font-size:1.5rem}
+}
+@media (max-width: 767px){
+  .navbar .container{padding-left:1rem; padding-right:1rem}
+  .kpi{font-size:.95rem}
+  .kpi strong{font-size:1.4rem}
+  .btn-outline-light{padding:.25rem .5rem; font-size:.8rem}
+  .card{padding: .75rem !important}
+}
+
+/* Link & hover colors */
+a{color:#93c5fd; text-decoration:none}
+a:hover{color:#bfdbfe}
+
+/* Plotly tooltip text brightness (override) */
+.js-plotly-plot .hoverlayer .hovertext{filter:brightness(1.2)}
+

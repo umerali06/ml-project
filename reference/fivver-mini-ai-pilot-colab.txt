@@ -1,0 +1,80 @@
+Fiverr Scope of Work — Mini AI Pilot (CSV → Prediction → Prioritized Dispatch)
+
+Gig Title
+Mini AI Pilot: Build a Simple Prediction Model & Create a Prioritized Dispatch List from CSV (Colab, Pandas, Scikit-learn)
+
+Project Summary (confidential)
+We are running a small, low-profile proof of concept in urban electric mobility. You will use a synthetic CSV to: (1) train a simple prediction model (time-to-empty in minutes), (2) convert it to minutes-to-20% SoC, and (3) output a prioritized dispatch list (CSV) for daily operations. No paid APIs, no sensitive data. Details shared after a short screening + NDA. All communication via Fiverr.
+
+Inputs (I will provide)
+• synthetic_gbfs.csv (sample dataset with columns such as position, soc_now, hour/day, simple weather, demand score)
+• Example output structure for dispatch_list.csv
+• (Optional) a KPI sheet template & a starter notebook
+
+Deliverables (what you must deliver)
+• Colab notebook (.ipynb) that runs end-to-end (from install/imports to outputs)
+• dispatch_list.csv sorted by priority with at least these columns: vehicle_id, zone_name, soc_now, pred_minutes_to_20pct, priority_score, dist_km_to_hub, hour, day_of_week
+• Top-50 CSV or Sheet tab (separate file or tab)
+• Feature importances chart (png)
+• README (FR or EN): how to run, what to change when a new CSV arrives, how to interpret outputs
+• Short report (max 1 page): MAE, R², key features, limits, next steps
+
+Detailed Tasks
+A. Environment & Data
+• Work in Google Colab or Jupyter (no paid services)
+• Load synthetic_gbfs.csv, validate types/missing values, basic stats
+
+B. Model (baseline, robust)
+• Train/test split
+• RandomForestRegressor (or XGBoost if available for free) predicting minutes_to_empty
+• Report MAE and R² on test set
+• Export feature importances bar chart (png)
+
+C. Decision Logic & Prioritization
+• Compute pred_minutes_to_20pct ≈ pred_minutes_to_empty * (soc_now − 0.20) / soc_now (guard against div/0)
+• Compute dist_km_to_hub using Haversine from a provided hub coordinate
+• Priority score (higher = more urgent): 0.60 × (sooner to 20%) + 0.25 × (demand_zone_score) + 0.15 × (proximity to hub)
+• Produce dispatch_list.csv sorted by priority (desc)
+• Provide Top-50 list separately (CSV or extra Sheet tab)
+
+D. Documentation & Handover
+• README (run steps, parameter to change hub location, how to re-run on any CSV with same schema)
+• Short report (MAE, R², top features, limitations, recommended next step)
+
+Acceptance Criteria (quality bar)
+• Notebook runs in one click on free Colab (no paid keys/no external APIs)
+• MAE ≤ 35 minutes and R² ≥ 0.55 on the synthetic dataset
+• Correct priority logic and required columns present in dispatch_list.csv
+• Clean, commented code; reproducible on any CSV with same schema
+• 1 revision included for bugfix/adjustments in scope
+
+Out of Scope (to avoid scope creep)
+• No integration with external operator APIs
+• No paid datasets/services
+• No real-world battery handling/safety SOPs (simulation only)
+
+Tools & Stack (required)
+• Google Colab, Python 3
+• pandas, scikit-learn, matplotlib (and numpy)
+• Optional (free): XGBoost, geopy or manual Haversine
+
+Timeline & Milestones
+• 48 hours total
+• Day 1: data check + baseline model + first draft of dispatch list
+• Day 2: finalize metrics, charts, README, short report, deliver all files
+
+Budget (fixed, all-in)
+MAX budget: €15–€20 total (one milestone, 1 revision). IP assignment to buyer. NDA required before you start.
+
+Required Skills (Fiverr tags)
+• Python / Data Science (pandas, scikit-learn)
+• Google Colab / Jupyter
+• Regression modeling, metrics (MAE, R²)
+• CSV cleaning, basic feature engineering
+• Basic geospatial math (Haversine)
+• Clear documentation (README) & reproducible notebooks
+
+How to Apply (via Fiverr only)
+• Send 2–4 lines about similar mini-POCs you’ve done
+• Confirm you accept budget ≤ €20, 48h delivery, 1 revision, NDA, and IP transfer
+• Share a snippet (screenshot or small code block) showing train/test split + MAE/R² in scikit-learn

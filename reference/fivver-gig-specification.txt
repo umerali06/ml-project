@@ -1,0 +1,19 @@
+Full Gig Description & Execution Specs — Mini AI Pilot (CSV → Prediction → Prioritized Dispatch)
+Audience: Fiverr freelancer (beginner-friendly) and volunteer contributors.
+Confidentiality: Details beyond this document are shared only after a short screening and a simple NDA.
+Files & Links to attach
+• Beginner Colab notebook: sandbox:/mnt/data/mini_ai_pilot_colab.ipynb
+• Blank CSV template: sandbox:/mnt/data/gbfs_template.csv
+• README (Markdown): sandbox:/mnt/data/README_MINI_AI_PILOT.md
+• Optional example files (if present): synthetic_gbfs.csv, dispatch_list.csv, model_metrics.txt, AI_roadmap_one_pager_FR.txt, Volunteer_Announcement_EN.docx, Fiverr_SOW_Mini_AI_Pilot_EN.docx
+Scope of Work (summary)
+•	Load CSV, basic checks; train/test split; RandomForestRegressor baseline.
+•	Report MAE/R²; feature importances chart.
+•	Compute pred_minutes_to_20pct & dist_km_to_hub (Haversine).
+•	Priority = 0.60*(1−norm(mins_to_20)) + 0.25*norm(demand) + 0.15*(1−norm(dist_to_hub)).
+•	Export dispatch_list.csv (required columns) + Top‑50 subset; provide README + short 1‑page report.
+Acceptance, Timeline & Budget
+• Runs on free Colab; MAE ≤ 35 min, R² ≥ 0.55; correct columns and logic; reproducible; 1 revision.
+• Timeline: 48h total. • Budget: MAX €15–€20 (fixed, one milestone).
+Legal & IP
+NDA required. Full IP/code assignment to buyer. No public portfolio without written consent.

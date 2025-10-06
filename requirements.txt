@@ -1,0 +1,8 @@
+flask>=3.0,<4
+# Use versions with wheels for Python 3.13
+numpy>=2.1
+pandas>=2.2.3
+plotly>=5.22
+# gunicorn is optional (Linux/macOS deployment); not required on Windows
+gunicorn>=21.2; platform_system != 'Windows'
+

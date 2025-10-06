@@ -1,0 +1,21 @@
+Mini AI Pilot - Model Performance Metrics
+==================================================
+
+Model: RandomForestRegressor
+Features: soc_now, hour, day_of_week, demand_zone_score
+Training samples: 150
+Test samples: 50
+
+Performance Metrics:
+  • MAE: 22.43 minutes
+  • RMSE: 26.52 minutes
+  • R²: 0.853
+  • MAPE: 18.9%
+
+Cross-Validation Results:
+  • Mean MAE: 21.69 ± 2.26 minutes
+  • Individual fold scores: [20.26385    21.14231667 22.38246667 25.64245    19.0165    ]
+
+Acceptance Criteria:
+  • MAE <= 35 minutes: PASS (22.43)
+  • R² >= 0.55: PASS (0.853)

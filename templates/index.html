@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini AI Pilot — Simulation Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+      body { background:#0f172a; color:#e2e8f0; }
+      .card { background:#111827; border:1px solid #1f2937; }
+      .table { color:#e2e8f0; }
+      .table thead th { color:#93c5fd; }
+      .kpi { font-size: 1.2rem; }
+      a, a:hover { color:#93c5fd; }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark">
+      <div class="container py-2 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+          <h5 class="brand mb-0">Mini AI Pilot</h5>
+          <span class="badge-chip">Simulation Dashboard</span>
+        </div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-light" href="/download/dispatch_list.csv">dispatch_list.csv</a>
+          <a class="btn btn-sm btn-outline-light" href="/download/top_50_dispatch.csv">top_50_dispatch.csv</a>
+          <a class="btn btn-sm btn-outline-light" href="/download/synthetic_gbfs.csv">synthetic_gbfs.csv</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container py-4">
+
+      <form class="card mb-3 p-3 filters" method="post" action="/" enctype="multipart/form-data">
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label">Zone</label>
+                <select class="form-select" id="zoneFilter">
+                  <option value="">All zones</option>
+                  {% for z in dispatch['zone_name'].dropna().unique() %}
+                  <option value="{{ z }}">{{ z }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Hour</label>
+                <select class="form-select" id="hourFilter">
+                  <option value="">All hours</option>
+                  {% for h in range(0,24) %}
+                  <option value="{{ h }}">{{ '%02d:00' % h }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Min. Priority</label>
+                <input type="number" step="0.01" min="0" max="1" class="form-control" id="prioMin" placeholder="0.70">
+              </div>
+              <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-light" id="applyFilters">Filter Table</button>
+                <button type="button" class="btn btn-outline-light" id="resetFilters">Reset</button>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">Hub Lat</label>
+                <input type="number" step="0.0001" class="form-control" name="hub_lat" placeholder="48.866">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Hub Lon</label>
+                <input type="number" step="0.0001" class="form-control" name="hub_lon" placeholder="2.400">
+              </div>
+              <div class="col-4">
+                <label class="form-label">Urgency</label>
+                <input type="number" step="0.01" min="0" max="1" class="form-control" name="w_urgency" placeholder="0.60">
+              </div>
+              <div class="col-4">
+                <label class="form-label">Demand</label>
+                <input type="number" step="0.01" min="0" max="1" class="form-control" name="w_demand" placeholder="0.25">
+              </div>
+              <div class="col-4">
+                <label class="form-label">Proximity</label>
+                <input type="number" step="0.01" min="0" max="1" class="form-control" name="w_proximity" placeholder="0.15">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Upload CSV (optional)</label>
+                <input type="file" class="form-control" name="csv" accept=".csv">
+              </div>
+              <div class="col-12 text-end">
+                <button type="submit" class="btn btn-outline-light">Recompute</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <div class="card p-3"><div class="kpi">Total Vehicles<br><strong>{{ total }}</strong></div></div>
+        </div>
+        <div class="col-md-3">
+          <div class="card p-3"><div class="kpi">Unique Zones<br><strong>{{ zones }}</strong></div></div>
+        </div>
+        <div class="col-md-3">
+          <div class="card p-3"><div class="kpi">Average SOC<br><strong>{{ '%.1f' % (avg_soc*100) }}%</strong></div></div>
+        </div>
+        <div class="col-md-3">
+          <div class="card p-3"><div class="kpi">Avg Distance to Hub<br><strong>{{ '%.1f' % avg_dist }} km</strong></div></div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <div class="card p-3">
+            <h6 class="mb-3">Priority Score Distribution</h6>
+            <div id="priority_chart"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-3">
+            <h6 class="mb-3">SOC vs Priority by Zone</h6>
+            <div id="soc_priority_chart"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <div class="card p-3">
+            <h6 class="mb-3">Distance to Hub vs Priority</h6>
+            <div id="dist_priority_chart"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-3">
+            <h6 class="mb-3">Top-50 Zone Composition</h6>
+            <div id="top50_zones_chart"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-8">
+          <div class="card p-3">
+            <h6 class="mb-3">Dispatch List (Top 100 Preview)</h6>
+            <div class="table-responsive" id="dispatchTableWrap">
+              <table class="table table-sm table-striped" id="dispatchTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Vehicle</th>
+                    <th>Zone</th>
+                    <th>SOC</th>
+                    <th>Min→20%</th>
+                    <th>Demand</th>
+                    <th>Dist→Hub (km)</th>
+                    <th>Priority</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for _, r in dispatch.head(100).iterrows() %}
+                  <tr data-zone="{{ r['zone_name'] }}" data-hour="{{ r['hour'] }}" data-priority="{{ '%.3f' % r['priority_score'] }}">
+                    <td>{{ r['rank'] if 'rank' in r else loop.index }}</td>
+                    <td>{{ r['vehicle_id'] }}</td>
+                    <td class="zone-cell">{{ r['zone_name'] }}</td>
+                    <td>{{ '%.0f' % (r['soc_now']*100) }}%</td>
+                    <td>{{ '%.1f' % r['pred_minutes_to_20pct'] }}</td>
+                    <td>{{ '%.2f' % r['demand_zone_score'] }}</td>
+                    <td>{{ '%.1f' % r['dist_km_to_hub'] }}</td>
+                    <td class="priority-cell">{{ '%.3f' % r['priority_score'] }}</td>
+                    <td>{{ '%02d:00' % r['hour'] }} (D{{ r['day_of_week'] }})</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card p-3">
+            <h6 class="mb-3">Top‑50 (Preview)</h6>
+            <ol class="mb-0">
+              {% for _, r in top50.head(20).iterrows() %}
+              <li class="mb-1">{{ r['vehicle_id'] }} — {{ '%.3f' % r['priority_score'] }}</li>
+              {% endfor %}
+            </ol>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+      const figs = {{ figs|tojson }};
+      if (figs.priority) Plotly.newPlot('priority_chart', figs.priority.data, figs.priority.layout, {displayModeBar:false});
+      if (figs.soc_priority) Plotly.newPlot('soc_priority_chart', figs.soc_priority.data, figs.soc_priority.layout, {displayModeBar:false});
+      if (figs.dist_priority) Plotly.newPlot('dist_priority_chart', figs.dist_priority.data, figs.dist_priority.layout, {displayModeBar:false});
+      if (figs.top50_zones) Plotly.newPlot('top50_zones_chart', figs.top50_zones.data, figs.top50_zones.layout, {displayModeBar:false});
+
+      // Client-side filters
+      const applyBtn = document.getElementById('applyFilters');
+      const resetBtn = document.getElementById('resetFilters');
+      const zoneSel = document.getElementById('zoneFilter');
+      const hourSel = document.getElementById('hourFilter');
+      const prioMin = document.getElementById('prioMin');
+      const rows = Array.from(document.querySelectorAll('#dispatchTable tbody tr'));
+
+      function applyFilters(){
+        const z = zoneSel.value;
+        const h = hourSel.value;
+        const p = prioMin.value ? parseFloat(prioMin.value) : null;
+        rows.forEach(tr => {
+          const okZ = !z || tr.dataset.zone === z;
+          const okH = !h || tr.dataset.hour === h;
+          const okP = !p || parseFloat(tr.dataset.priority) >= p;
+          tr.style.display = (okZ && okH && okP) ? '' : 'none';
+        });
+      }
+      function resetFilters(){
+        zoneSel.value = '';
+        hourSel.value = '';
+        prioMin.value = '';
+        rows.forEach(tr => tr.style.display='');
+      }
+      applyBtn?.addEventListener('click', applyFilters);
+      resetBtn?.addEventListener('click', resetFilters);
+    </script>
+  </body>
+  </html>
+
+
