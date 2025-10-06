@@ -6,3 +6,7 @@ plotly>=5.22
 # gunicorn is optional (Linux/macOS deployment); not required on Windows
 gunicorn>=21.2; platform_system != 'Windows'
 
+flask
+numpy
+pandas
+plotly
