@@ -1,9 +1,13 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for
+from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify
 import pandas as pd
 import plotly.express as px
 import plotly
 import json
 import os
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, r2_score
 
 app = Flask(__name__)
 
@@ -63,6 +67,146 @@ def recompute_priority(dispatch: pd.DataFrame, synth: pd.DataFrame | None,
             dispatch['rank'] = range(1, len(dispatch)+1)
     top50 = dispatch.head(50).copy() if not dispatch.empty else pd.DataFrame()
     return dispatch, top50
+
+
+def generate_synthetic_data(n_vehicles=200, random_seed=42):
+    """Generate synthetic vehicle fleet data for testing"""
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    
+    zones = [
+        ("Villepinte", 48.97, 2.55, 1.2),
+        ("Viry-Chatillon", 48.67, 2.38, 1.0),
+        ("Roissy-en-Brie", 48.79, 2.65, 1.1),
+        ("Malakoff", 48.82, 2.29, 1.05),
+        ("Bobigny", 48.92, 2.43, 1.15)
+    ]
+    
+    rows = []
+    for i in range(n_vehicles):
+        name, zlat, zlon, dbase = zones[np.random.choice(len(zones))]
+        lat = zlat + np.random.normal(0, 0.01)
+        lon = zlon + np.random.normal(0, 0.015)
+        hour = np.random.randint(6, 23)
+        dow = np.random.randint(0, 7)
+        peak = 1.0 + (0.45 if (7 <= hour <= 9 or 17 <= hour <= 20) else 0)
+        weekend = 1 if dow in [5, 6] else 0
+        demand = dbase * peak * (1.15 if weekend else 1.0)
+        soc = np.clip(np.random.normal(0.45, 0.18), 0.10, 0.95)
+        base_minutes_full = 420
+        minutes_to_empty = base_minutes_full * (1.0 / demand) * soc + np.random.normal(0, 20)
+        minutes_to_empty = max(5, minutes_to_empty)
+        
+        rows.append({
+            'vehicle_id': f"{name[:3].upper()}-{1000+i}",
+            'zone_name': name,
+            'latitude': lat,
+            'longitude': lon,
+            'soc_now': round(float(soc), 3),
+            'hour': hour,
+            'day_of_week': dow,
+            'demand_zone_score': round(float(demand), 3),
+            'minutes_to_empty': round(float(minutes_to_empty), 1)
+        })
+    
+    return pd.DataFrame(rows)
+
+
+def run_ml_simulation(random_seed=42):
+    """Run the complete ML simulation pipeline"""
+    try:
+        # Generate synthetic data
+        df = generate_synthetic_data(n_vehicles=200, random_seed=random_seed)
+        
+        # Train ML model
+        features = ['soc_now', 'hour', 'day_of_week', 'demand_zone_score']
+        X = df[features].values
+        y = df['minutes_to_empty'].values
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+        
+        model = RandomForestRegressor(n_estimators=200, random_state=0)
+        model.fit(X_train, y_train)
+        
+        # Make predictions
+        df['pred_minutes_to_empty'] = model.predict(df[features].values)
+        
+        # IMPORTANT: Calculate pred_minutes_to_20pct from MODEL predictions, not ground truth
+        df['pred_minutes_to_20pct'] = np.maximum(
+            0.0,
+            df['pred_minutes_to_empty'] * (df['soc_now'] - 0.20) / np.maximum(df['soc_now'], 1e-6)
+        )
+        
+        # Calculate metrics
+        y_pred_test = model.predict(X_test)
+        mae = mean_absolute_error(y_test, y_pred_test)
+        r2 = r2_score(y_test, y_pred_test)
+        
+        # Calculate priority scores (now using ML predictions)
+        hub_lat, hub_lon = 48.866, 2.400
+        w_urg, w_dem, w_prox = 0.60, 0.25, 0.15
+        
+        df, top50 = recompute_priority(df, None, hub_lat, hub_lon, w_urg, w_dem, w_prox)
+        
+        # Add rank column
+        df.insert(0, 'rank', range(1, len(df) + 1))
+        top50.insert(0, 'rank', range(1, len(top50) + 1))
+        
+        # Save to CSV
+        df.to_csv('dispatch_list.csv', index=False)
+        top50.to_csv('top_50_dispatch.csv', index=False)
+        
+        # Save full dataset with predictions
+        synth_df = df.copy()
+        synth_df.to_csv('synthetic_gbfs.csv', index=False)
+        
+        return {
+            'success': True,
+            'mae': round(mae, 2),
+            'r2': round(r2, 3),
+            'vehicles': len(df),
+            'seed': random_seed
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@app.route('/run_simulation', methods=['POST'])
+def trigger_simulation():
+    """Endpoint to trigger new simulation"""
+    try:
+        seed_type = request.form.get('seed_type', 'fixed')
+        
+        if seed_type == 'random':
+            seed = None
+        else:
+            seed = int(request.form.get('seed_value', 42))
+        
+        result = run_ml_simulation(random_seed=seed)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': f"✅ Simulation complete! MAE: {result['mae']} min, R²: {result['r2']}",
+                'mae': result['mae'],
+                'r2': result['r2'],
+                'vehicles': result['vehicles'],
+                'seed': 'Random' if seed is None else seed
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f"❌ Simulation failed: {result['error']}"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f"❌ Error: {str(e)}"
+        }), 500
 
 
 @app.route('/', methods=['GET', 'POST'])

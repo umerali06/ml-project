@@ -36,6 +36,35 @@
 
     <div class="container py-4">
 
+      <div class="card mb-3 p-3" style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h6 class="mb-2" style="color: #93c5fd;">🚀 Run New ML Simulation</h6>
+            <p class="mb-0" style="font-size: 0.9rem; color: #cbd5e1;">Generate fresh vehicle data, train RandomForest model, and calculate new priority scores</p>
+          </div>
+          <div class="col-md-4 text-end">
+            <div class="d-flex align-items-center justify-content-end gap-2 mb-2">
+              <label class="form-label mb-0" style="color: #cbd5e1; font-size: 0.85rem;">Seed Type:</label>
+              <select class="form-select form-select-sm" id="seedType" style="width: auto; background: #0f172a; border-color: #334155; color: #e5e7eb;">
+                <option value="fixed">Fixed (42)</option>
+                <option value="custom">Custom</option>
+                <option value="random">Random</option>
+              </select>
+            </div>
+            <div id="customSeedInput" style="display: none;" class="mb-2">
+              <input type="number" class="form-control form-control-sm" id="seedValue" placeholder="Enter seed" value="42" style="background: #0f172a; border-color: #334155; color: #e5e7eb;">
+            </div>
+            <button type="button" class="btn btn-light btn-sm" id="runSimulation" style="min-width: 150px;">
+              <span id="btnText">▶️ Run Simulation</span>
+              <span id="btnLoader" style="display: none;">
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>Running...
+              </span>
+            </button>
+          </div>
+        </div>
+        <div id="simulationResult" class="mt-2" style="display: none;"></div>
+      </div>
+
       <form class="card mb-3 p-3 filters" method="post" action="/" enctype="multipart/form-data">
         <div class="row g-4">
           <div class="col-lg-8">
@@ -233,6 +262,77 @@
       }
       applyBtn?.addEventListener('click', applyFilters);
       resetBtn?.addEventListener('click', resetFilters);
+
+      // Simulation controls
+      const seedTypeSelect = document.getElementById('seedType');
+      const customSeedInput = document.getElementById('customSeedInput');
+      const runSimBtn = document.getElementById('runSimulation');
+      const btnText = document.getElementById('btnText');
+      const btnLoader = document.getElementById('btnLoader');
+      const simulationResult = document.getElementById('simulationResult');
+
+      seedTypeSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+          customSeedInput.style.display = 'block';
+        } else {
+          customSeedInput.style.display = 'none';
+        }
+      });
+
+      runSimBtn.addEventListener('click', async function() {
+        const formData = new FormData();
+        const seedType = seedTypeSelect.value;
+        
+        formData.append('seed_type', seedType);
+        if (seedType === 'custom') {
+          formData.append('seed_value', document.getElementById('seedValue').value);
+        } else if (seedType === 'fixed') {
+          formData.append('seed_value', '42');
+        }
+
+        btnText.style.display = 'none';
+        btnLoader.style.display = 'inline-block';
+        runSimBtn.disabled = true;
+        simulationResult.style.display = 'none';
+
+        try {
+          const response = await fetch('/run_simulation', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            simulationResult.innerHTML = `
+              <div class="alert alert-success" style="background: #065f46; border: 1px solid #10b981; color: #d1fae5;">
+                ${result.message}
+                <br><small>Vehicles: ${result.vehicles} | Seed: ${result.seed}</small>
+              </div>`;
+            simulationResult.style.display = 'block';
+            
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            simulationResult.innerHTML = `
+              <div class="alert alert-danger" style="background: #7f1d1d; border: 1px solid #ef4444; color: #fecaca;">
+                ${result.message}
+              </div>`;
+            simulationResult.style.display = 'block';
+          }
+        } catch (error) {
+          simulationResult.innerHTML = `
+            <div class="alert alert-danger" style="background: #7f1d1d; border: 1px solid #ef4444; color: #fecaca;">
+              ❌ Error: ${error.message}
+            </div>`;
+          simulationResult.style.display = 'block';
+        } finally {
+          btnText.style.display = 'inline-block';
+          btnLoader.style.display = 'none';
+          runSimBtn.disabled = false;
+        }
+      });
     </script>
   </body>
   </html>
