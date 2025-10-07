@@ -1,13 +1,14 @@
+# Core Flask dependencies
 flask>=3.0,<4
-# Use versions with wheels for Python 3.13
+gunicorn>=21.2
+
+# Data processing and ML
 numpy>=2.1
 pandas>=2.2.3
-plotly>=5.22
-# gunicorn is optional (Linux/macOS deployment); not required on Windows
-gunicorn>=21.2; platform_system != 'Windows'
+scikit-learn>=1.3
 
-flask
-numpy
-pandas
-plotly
-scikit-learn
+# Visualization
+plotly>=5.22
+
+# Production WSGI server (for Linux/macOS)
+# Note: Hostinger typically uses mod_wsgi or similar, but gunicorn is included as backup
