@@ -8,19 +8,24 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score
+from config import get_config
 
+# Initialize Flask app with configuration
 app = Flask(__name__)
+config = get_config()
+app.config.from_object(config)
+config.init_app(app)
 
 
 def load_data():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    dispatch_path = os.path.join(base_dir, 'dispatch_list.csv')
-    top50_path = os.path.join(base_dir, 'top_50_dispatch.csv')
-    synth_path = os.path.join(base_dir, 'synthetic_gbfs.csv')
+    """Load data files using configuration paths"""
+    dispatch_path = config.DISPATCH_FILE
+    top50_path = config.TOP50_FILE
+    synth_path = config.SYNTHETIC_FILE
 
-    dispatch = pd.read_csv(dispatch_path) if os.path.exists(dispatch_path) else pd.DataFrame()
-    top50 = pd.read_csv(top50_path) if os.path.exists(top50_path) else pd.DataFrame()
-    synth = pd.read_csv(synth_path) if os.path.exists(synth_path) else pd.DataFrame()
+    dispatch = pd.read_csv(dispatch_path) if dispatch_path.exists() else pd.DataFrame()
+    top50 = pd.read_csv(top50_path) if top50_path.exists() else pd.DataFrame()
+    synth = pd.read_csv(synth_path) if synth_path.exists() else pd.DataFrame()
     return dispatch, top50, synth
 
 
@@ -69,8 +74,10 @@ def recompute_priority(dispatch: pd.DataFrame, synth: pd.DataFrame | None,
     return dispatch, top50
 
 
-def generate_synthetic_data(n_vehicles=200, random_seed=42):
+def generate_synthetic_data(n_vehicles=None, random_seed=None):
     """Generate synthetic vehicle fleet data for testing"""
+    n_vehicles = n_vehicles or config.DEFAULT_N_VEHICLES
+    random_seed = random_seed or config.DEFAULT_RANDOM_SEED
     if random_seed is not None:
         np.random.seed(random_seed)
     
@@ -112,11 +119,12 @@ def generate_synthetic_data(n_vehicles=200, random_seed=42):
     return pd.DataFrame(rows)
 
 
-def run_ml_simulation(random_seed=42):
+def run_ml_simulation(random_seed=None):
     """Run the complete ML simulation pipeline"""
     try:
+        random_seed = random_seed or config.DEFAULT_RANDOM_SEED
         # Generate synthetic data
-        df = generate_synthetic_data(n_vehicles=200, random_seed=random_seed)
+        df = generate_synthetic_data(n_vehicles=config.DEFAULT_N_VEHICLES, random_seed=random_seed)
         
         # Train ML model
         features = ['soc_now', 'hour', 'day_of_week', 'demand_zone_score']
@@ -143,8 +151,8 @@ def run_ml_simulation(random_seed=42):
         r2 = r2_score(y_test, y_pred_test)
         
         # Calculate priority scores (now using ML predictions)
-        hub_lat, hub_lon = 48.866, 2.400
-        w_urg, w_dem, w_prox = 0.60, 0.25, 0.15
+        hub_lat, hub_lon = config.DEFAULT_HUB_LAT, config.DEFAULT_HUB_LON
+        w_urg, w_dem, w_prox = config.DEFAULT_W_URGENCY, config.DEFAULT_W_DEMAND, config.DEFAULT_W_PROXIMITY
         
         df, top50 = recompute_priority(df, None, hub_lat, hub_lon, w_urg, w_dem, w_prox)
         
@@ -152,13 +160,13 @@ def run_ml_simulation(random_seed=42):
         df.insert(0, 'rank', range(1, len(df) + 1))
         top50.insert(0, 'rank', range(1, len(top50) + 1))
         
-        # Save to CSV
-        df.to_csv('dispatch_list.csv', index=False)
-        top50.to_csv('top_50_dispatch.csv', index=False)
+        # Save to CSV using config paths
+        df.to_csv(config.DISPATCH_FILE, index=False)
+        top50.to_csv(config.TOP50_FILE, index=False)
         
         # Save full dataset with predictions
         synth_df = df.copy()
-        synth_df.to_csv('synthetic_gbfs.csv', index=False)
+        synth_df.to_csv(config.SYNTHETIC_FILE, index=False)
         
         return {
             'success': True,
@@ -183,7 +191,7 @@ def trigger_simulation():
         if seed_type == 'random':
             seed = None
         else:
-            seed = int(request.form.get('seed_value', 42))
+            seed = int(request.form.get('seed_value', config.DEFAULT_RANDOM_SEED))
         
         result = run_ml_simulation(random_seed=seed)
         
@@ -212,10 +220,10 @@ def trigger_simulation():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     dispatch, top50, synth = load_data()
-    # Defaults
-    hub_lat = 48.866
-    hub_lon = 2.400
-    w_urg, w_dem, w_prox = 0.60, 0.25, 0.15
+    # Defaults from configuration
+    hub_lat = config.DEFAULT_HUB_LAT
+    hub_lon = config.DEFAULT_HUB_LON
+    w_urg, w_dem, w_prox = config.DEFAULT_W_URGENCY, config.DEFAULT_W_DEMAND, config.DEFAULT_W_PROXIMITY
 
     if request.method == 'POST':
         # Read from form
@@ -322,17 +330,25 @@ def index():
 
 @app.route('/download/<name>')
 def download(name: str):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(base_dir, name)
-    if os.path.exists(path):
-        return send_file(path, as_attachment=True)
-    return ('Not found', 404)
+    """Download files using configuration paths"""
+    # Security: Only allow specific file downloads
+    allowed_files = ['dispatch_list.csv', 'top_50_dispatch.csv', 'synthetic_gbfs.csv']
+    if name not in allowed_files:
+        return ('File not allowed', 403)
+    
+    file_path = config.DATA_DIR / name
+    if file_path.exists():
+        return send_file(file_path, as_attachment=True)
+    return ('File not found', 404)
 
 
 if __name__ == '__main__':
-    # Production settings for Hostinger
-    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    # Get configuration-based settings
+    debug_mode = app.config.get('DEBUG', False)
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    host = os.environ.get('HOST', '0.0.0.0')
+    
+    app.logger.info(f'Starting Flask app in {config.FLASK_ENV} mode')
+    app.run(host=host, port=port, debug=debug_mode)
 
 
